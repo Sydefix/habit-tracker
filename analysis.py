@@ -178,6 +178,29 @@ def _get_habits_for_generation(
     return session.query(Habit).all()
 
 
+def _is_completed_in_current_period(habit: Habit, current_time: datetime) -> bool:
+    """
+    A single, consistent function to check if a habit was completed in its
+    current period (today for daily, this week for weekly, etc.).
+    """
+    today = current_time.date()
+    if habit.periodicity == "daily":
+        # Check for any completion on the current day
+        return any(c.completion_date.date() == today for c in habit.completions)
+    elif habit.periodicity == "weekly":
+        # Check for any completion from Monday of this week onwards
+        start_of_week = today - timedelta(days=today.weekday())
+        return any(
+            c.completion_date.date() >= start_of_week for c in habit.completions
+        )
+    elif habit.periodicity == "monthly":
+        # Check for any completion from the 1st of this month onwards
+        start_of_month = today.replace(day=1)
+        return any(
+            c.completion_date.date() >= start_of_month for c in habit.completions
+        )
+    return False
+
 def generate_table(
     session: Session,
     periodicity: Optional[str] = None,
@@ -199,9 +222,8 @@ def generate_table(
         # Approximation for check daily 1, weekly 7, or monthly 30
         start_of_period = deadline - timedelta(days=1 if habit.periodicity == "daily" else 7 if habit.periodicity == "weekly" else 30)
         
-        is_checked = any(
-            comp.completion_date > start_of_period for comp in habit.completions
-        )
+        is_checked = _is_completed_in_current_period(habit, current_time)
+        
         status = "☑" if is_checked else "☐"
 
         name_trunc = (
@@ -253,9 +275,7 @@ def generate_list(
         deadline = _calculate_current_deadline(habit, current_time)
         start_of_period = deadline - timedelta(days=1 if habit.periodicity == "daily" else 7 if habit.periodicity == "weekly" else 30) # Approximation for check
         
-        is_checked = any(
-            comp.completion_date > start_of_period for comp in habit.completions
-        )
+        is_checked = _is_completed_in_current_period(habit, current_time)
         status = "☑" if is_checked else "☐"
         
         desc = habit.description or ""
@@ -431,18 +451,11 @@ def struggled_habits(session: Session) -> List[Dict[str, Any]]:
     # Sort by score, descending
     return sorted(habit_scores, key=lambda x: x["score"], reverse=True)
 
+# Replace the entire generate_summary function with this cleaner version
+
 def generate_summary(session: Session) -> str:
     """
     Generates a string summary of the overall habit landscape.
-
-    Includes counts of total, completed, and uncompleted habits by
-    periodicity, and identifies the best and most struggled-with habits.
-
-    Args:
-        session (Session): The database session.
-
-    Returns:
-        str: A formatted, multi-line string with the summary statistics.
     """
     manager = HabitManager(session)
     all_habits = manager.get_all_habits()
@@ -451,35 +464,33 @@ def generate_summary(session: Session) -> str:
         return "No habits registered."
 
     now = datetime.now()
-    today = now.date()
-    start_of_week = today - timedelta(days=today.weekday())
-    start_of_month = today.replace(day=1)
 
-    # Initialize counters
-    daily_completed, daily_total = 0, 0
-    weekly_completed, weekly_total = 0, 0
-    monthly_completed, monthly_total = 0, 0
+    # Use the helper function for consistent logic
+    daily_completed = sum(
+        1
+        for h in all_habits
+        if h.periodicity == "daily" and _is_completed_in_current_period(h, now)
+    )
+    weekly_completed = sum(
+        1
+        for h in all_habits
+        if h.periodicity == "weekly" and _is_completed_in_current_period(h, now)
+    )
+    monthly_completed = sum(
+        1
+        for h in all_habits
+        if h.periodicity == "monthly" and _is_completed_in_current_period(h, now)
+    )
 
-    for habit in all_habits:
-        if habit.periodicity == "daily":
-            daily_total += 1
-            if any(c.completion_date.date() == today for c in habit.completions):
-                daily_completed += 1
-        elif habit.periodicity == "weekly":
-            weekly_total += 1
-            if any(c.completion_date.date() >= start_of_week for c in habit.completions):
-                weekly_completed += 1
-        elif habit.periodicity == "monthly":
-            monthly_total += 1
-            if any(c.completion_date.date() >= start_of_month for c in habit.completions):
-                monthly_completed += 1
+    daily_total = sum(1 for h in all_habits if h.periodicity == "daily")
+    weekly_total = sum(1 for h in all_habits if h.periodicity == "weekly")
+    monthly_total = sum(1 for h in all_habits if h.periodicity == "monthly")
 
-    # Get struggle analysis
     struggle_results = struggled_habits(session)
     most_struggled = struggle_results[0]["habit"].name if struggle_results else "N/A"
+    # The best performing habit has the lowest struggle score
     best_performing = struggle_results[-1]["habit"].name if struggle_results else "N/A"
 
-    # Build the output string
     summary = f"""
 --- Habit Summary ---
 Total Registered Habits: {len(all_habits)}
