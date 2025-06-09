@@ -1,45 +1,15 @@
 # test_habit_manager.py
 
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import MultipleResultsFound
 from datetime import datetime
 from typing import Iterator
-
-from models import Base, Habit, Completion # Completion might be used if testing insert with completions
 from habit_manager import HabitManager
 
-# --- Pytest Fixtures ---
+from models import Base, Habit, Completion # Completion might be used if testing insert with completions
 
-@pytest.fixture(scope="session")
-def engine():
-    return create_engine("sqlite:///:memory:")
-
-
-@pytest.fixture(scope="session")
-def setup_database(engine):
-    Base.metadata.create_all(bind=engine)
-    yield
-    # Base.metadata.drop_all(bind=engine) # Optional
-
-
-@pytest.fixture(scope="function")
-def db_session(engine, setup_database) -> Iterator[SQLAlchemySession]:
-    connection = engine.connect()
-    transaction = connection.begin()
-    Session = sessionmaker(bind=connection)
-    session = Session()
-    yield session
-    session.close()
-    transaction.rollback()
-    connection.close()
-
-
-@pytest.fixture
-def habit_manager(db_session: SQLAlchemySession) -> HabitManager:
-    return HabitManager(session=db_session)
 
 # --- Helper function to add a habit for tests ---
 def _add_habit(
@@ -178,15 +148,12 @@ def test_find_habit_with_non_existing_name(habit_manager: HabitManager):
     assert found_habit is None
 
 
-def test_find_habit_with_name_multiple_results(
-    habit_manager: HabitManager, db_session: SQLAlchemySession
-):
-    habit_name = "Exercise"
-    _add_habit(db_session, habit_name, "Cardio")
-    _add_habit(db_session, habit_name, "Weights")
+def test_find_by_name_multiple_results(habit_manager, db_session: SQLAlchemySession):
+    habit_name = "Drink Water"
+    _add_habit(db_session, habit_name, "First reminder")
+    _add_habit(db_session, habit_name, "Second reminder")
     with pytest.raises(MultipleResultsFound):
-        habit_manager.find_habit(habit_name)
-
+        habit_manager.find_by_name(habit_name)
 
 def test_find_habit_with_invalid_identifier_type(habit_manager: HabitManager):
     with pytest.raises(TypeError):
@@ -475,3 +442,4 @@ def test_checkoff_multiple_times(
     assert second_completion_time >= first_completion_time # Should be greater or equal
     # To be more precise, ensure they are distinct objects if IDs are different
     assert checked_off_habit_2.completions[0].id != checked_off_habit_2.completions[1].id
+
