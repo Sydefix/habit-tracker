@@ -1,7 +1,6 @@
 click==8.2.1
 colorama==0.4.6
 greenlet==3.2.3
--e git+https://github.com/Sydefix/habit-tracker.git@75b7c13ceb8c5e942e836f4f3ba18ce7b907a67f#egg=habit
 iniconfig==2.1.0
 packaging==25.0
 pluggy==1.6.0
