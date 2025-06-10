@@ -1,15 +1,13 @@
-# test_habit_manager.py
-
-import pytest
 from sqlalchemy.orm import sessionmaker, Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import MultipleResultsFound
 from datetime import datetime
 from typing import Iterator
-from habit_manager import HabitManager
+from habit.habit_manager import HabitManager
 
-from models import Base, Habit, Completion # Completion might be used if testing insert with completions
+from habit.models import Base, Habit, Completion # Completion might be used if testing insert with completions
 
+import pytest
 
 # --- Helper function to add a habit for tests ---
 def _add_habit(
@@ -69,7 +67,7 @@ def test_insert_habit_with_completions(
     assert inserted_habit.completions[0].habit_id == inserted_habit.id
 
 def test_insert_invalid_periodicity(habit_manager, db_session):
-    from models import Habit
+    
     habit = Habit(name="Test", description="desc", periodicity="yearly")
     with pytest.raises(ValueError):
         habit_manager.insert(habit)

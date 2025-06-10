@@ -1,6 +1,6 @@
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.exc import SQLAlchemyError
-from models import Habit, Completion
+from .models import Habit, Completion
 from datetime import datetime
 
 PERIODICITIES = {"daily", "weekly", "monthly"}

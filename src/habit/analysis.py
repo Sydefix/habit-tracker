@@ -119,8 +119,8 @@ from typing import Dict, List, Optional, Any
 
 from sqlalchemy.orm import Session
 
-from models import Habit, Completion
-from habit_manager import HabitManager, PERIODICITIES
+from .models import Habit, Completion
+from .habit_manager import HabitManager, PERIODICITIES
 
 
 def _calculate_current_deadline(habit: Habit, current_time: datetime) -> datetime:

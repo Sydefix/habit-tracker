@@ -1,16 +1,13 @@
-# cli.py
-
 import click
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import MultipleResultsFound
 
-# Import the core components of our application
-from models import Base, Habit, Completion
-from habit_manager import HabitManager, PERIODICITIES
-import analysis
-from fixtures import get_fixtures # Import our new fixtures
+from .models import Base, Habit, Completion
+from .habit_manager import HabitManager, PERIODICITIES
+from . import analysis
+from .fixtures import get_fixtures # Import our new fixtures
 
 # --- Database Setup ---
 # Production Database

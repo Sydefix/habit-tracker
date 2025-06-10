@@ -1,5 +1,3 @@
-# conftest.py
-
 import pytest
 from typing import Iterator
 from datetime import datetime
@@ -7,8 +5,8 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session as SQLAlchemySession
 
-from models import Base, Habit
-from habit_manager import HabitManager
+from habit.models import Base, Habit
+from habit.habit_manager import HabitManager
 
 
 @pytest.fixture(scope="session")

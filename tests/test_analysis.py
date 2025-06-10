@@ -1,10 +1,9 @@
-import pytest
 from datetime import datetime, timedelta
-
+import pytest
 from sqlalchemy.orm import Session as SQLAlchemySession
 
-from models import Habit, Completion
-from analysis import (
+from habit.models import Habit, Completion
+from habit.analysis import (
     _calculate_current_deadline,
     _periodicity,
     generate_summary,
