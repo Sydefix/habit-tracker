@@ -3,4 +3,4 @@ __pycache__/
 *.db
 .venv/
 *temp.py
-
+*.egg-info
