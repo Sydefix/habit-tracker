@@ -3,9 +3,9 @@
 A command-line application for building, tracking, and analyzing your habits directly from the terminal. Built with Python, SQLAlchemy, and Click.
 
 ![Python Version](https://img.shields.io/badge/python-3.8+-brightgreen.svg)
-![Click Version](https://img.shields.io/badge/Click-8.0+-brightblue.svg)
+![Click Version](https://img.shields.io/badge/Click-8.0+-blue.svg)
 ![Pytest Version](https://img.shields.io/badge/Pytest-8.4+-brightgreen.svg)
-![SQLAlchemy Version](https://img.shields.io/badge/SQLAlchemy-2.0+-brightblue.svg)
+![SQLAlchemy Version](https://img.shields.io/badge/SQLAlchemy-2.0+-blue.svg)
 
 This application provides a robust set of tools for personal development, featuring a full management suite, a powerful analysis engine, and a safe, sandboxed demo environment to explore all its capabilities.
 
