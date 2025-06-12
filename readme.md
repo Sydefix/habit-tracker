@@ -116,11 +116,10 @@ Here are a few of the most common commands.
 
 For a complete list of all commands and their options, please see the **[User Guide](https://github.com/Sydefix/habit-tracker/wiki/User-Guide-Command-Line-Usage)** on our GitHub Wiki.
 
-## Contributing
+## Contributing and Development
 
-Contributions are welcome! This project is built with a clean, decoupled architecture that is easy to extend.
+Contributions are welcome! This project is built with a clean, decoupled architecture that is easy to extend with scalability in mind. It was built with `SQLAlchemy` as this supports a variety of databases. It can also be easily plugged with `Flask`, `FastAPI`, and so on.
 
-To get started with development, please see the **[Developer Guide](https://github.com/Sydefix/habit-tracker/wiki/Developer-Guide-&-Project-Architecture)**.
 
 To run the test suite:
 ```bash
