@@ -1,13 +1,29 @@
-import click
+"""
+Main Command-Line Interface for the Habit Tracker application.
+
+This module uses the 'click' library to create a powerful and user-friendly
+CLI. It defines the main command group and all subcommands for managing,
+analyzing, and interacting with both production and demo habit databases.
+"""
+"""
+Main Command-Line Interface for the Habit Tracker application.
+
+This module uses the 'click' library to create a powerful and user-friendly
+CLI. It defines the main command group and all subcommands for managing,
+analyzing, and interacting with both production and demo habit databases.
+"""
+
 import os
+
+import click
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import MultipleResultsFound
 
-from .models import Base, Habit, Completion
-from .habit_manager import HabitManager, PERIODICITIES
 from . import analysis
-from .fixtures import get_fixtures # Import our new fixtures
+from .fixtures import get_fixtures
+from .habit_manager import PERIODICITIES, HabitManager
+from .models import Base, Completion, Habit
 
 # --- Database Setup ---
 # Production Database
@@ -20,46 +36,53 @@ DEMO_DB_URL = "sqlite:///./demo_habits.db"
 DEMO_ENGINE = create_engine(DEMO_DB_URL, echo=False)
 DemoSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=DEMO_ENGINE)
 
-# Ensure production tables are created
+# Ensure production tables are created on script load
 Base.metadata.create_all(bind=PROD_ENGINE)
 
 
-# --- Click Command Group ---
+# --- Click Command Groups ---
+
+
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.pass_context
-def cli(ctx):
-    """
-    A Command-Line Interface for managing and analyzing habits.
+def cli(ctx: click.Context):
+    """A Command-Line Interface for managing and analyzing habits.
+
     By default, commands run on the production database.
     Use the 'demo' command for a sandboxed environment.
+
+    Args:
+        ctx (click.Context): The context object passed by Click, used to
+            share state with subcommands.
     """
-    # Store the production session factory in the context
+    # Store the production session factory in the context by default.
+    # Subcommands like 'demo' can override this.
     ctx.obj = {"session_factory": ProdSessionLocal}
 
 
-# --- Demo Command Group ---
 @cli.group()
 @click.pass_context
-def demo(ctx):
-    """
-    A playground to test habits using a separate demo database.
+def demo(ctx: click.Context):
+    """A playground to test habits using a separate demo database.
 
     First, run 'demo start' to create the environment.
     Then, run any command like 'demo list' or 'demo analyze'.
+
+    Args:
+        ctx (click.Context): The context object. This command's primary
+            purpose is to switch the session factory in the context to
+            point to the demo database for all its subcommands.
     """
     demo_db_file = "demo_habits.db"
 
-    # If a user tries to run a command other than 'start' or 'reset'
-    # and the DB doesn't exist, guide them.
     if (
         not os.path.exists(demo_db_file)
         and ctx.invoked_subcommand not in ["start", "reset"]
     ):
         click.secho("Error: Demo database not found.", fg="red")
-        click.echo("Please run 'python cli.py demo start' to create it.")
-        ctx.exit()  # Stop further execution
+        click.echo("Please run 'habit demo start' to create it.")
+        ctx.exit()
 
-    # IMPORTANT: This switches the context for all subcommands of 'demo'
     ctx.obj["session_factory"] = DemoSessionLocal
 
 
@@ -70,11 +93,10 @@ def start_demo():
     if os.path.exists(demo_db_file):
         click.echo("Demo database already exists.")
         click.echo(
-            "You can continue using it, or run 'python cli.py demo reset' to start over."
+            "You can continue using it, or run 'habit demo reset' to start over."
         )
         return
 
-    # Create tables and load fixtures
     click.echo("Creating new demo database...")
     Base.metadata.create_all(bind=DEMO_ENGINE)
     db = DemoSessionLocal()
@@ -99,12 +121,13 @@ def reset_demo():
     if os.path.exists(demo_db_file):
         os.remove(demo_db_file)
         click.secho("Demo database has been reset.", fg="yellow")
-        click.echo("Run 'python cli.py demo start' to create a new one.")
+        click.echo("Run 'habit demo start' to create a new one.")
     else:
         click.echo("No demo database found to reset.")
 
 
 # --- Core Commands ---
+
 
 @cli.command(name="list")
 @click.option(
@@ -114,8 +137,13 @@ def reset_demo():
     help="Filter habits by a specific periodicity.",
 )
 @click.pass_context
-def list_habits(ctx, periodicity: str):
-    """A shortcut to display habits in a list format."""
+def list_habits(ctx: click.Context, periodicity: str):
+    """A shortcut to display habits in a list format.
+
+    Args:
+        ctx (click.Context): The context object.
+        periodicity (str): The optional period to filter by.
+    """
     ctx.invoke(analyze, show="list", periodicity=periodicity)
 
 
@@ -132,18 +160,32 @@ def list_habits(ctx, periodicity: str):
     help="The periodicity of the habit (daily, weekly, monthly).",
 )
 @click.pass_context
-def add(ctx, name: str, description: str, periodicity: str):
-    """Adds a new habit to the database."""
+def add(ctx: click.Context, name: str, description: str, periodicity: str):
+    """Adds a new habit to the database.
+
+    Args:
+        ctx (click.Context): The context object.
+        name (str): The name of the new habit.
+        description (str): An optional description for the habit.
+        periodicity (str): The habit's period (daily, weekly, monthly).
+    """
     Session = ctx.obj["session_factory"]
     db = Session()
     try:
         manager = HabitManager(db)
         if manager.find_by_name(name):
-            click.secho(f"Error: A habit with the name '{name}' already exists.", fg="red")
+            click.secho(
+                f"Error: A habit with the name '{name}' already exists.", fg="red"
+            )
             return
-        new_habit = Habit(name=name, description=description, periodicity=periodicity)
+        new_habit = Habit(
+            name=name, description=description, periodicity=periodicity
+        )
         manager.insert(new_habit)
-        click.secho(f"Successfully added habit: '{name}' with {periodicity} periodicity.", fg="green")
+        click.secho(
+            f"Successfully added habit: '{name}' with {periodicity} periodicity.",
+            fg="green",
+        )
     finally:
         db.close()
 
@@ -159,10 +201,26 @@ def add(ctx, name: str, description: str, periodicity: str):
     help="A new periodicity for the habit.",
 )
 @click.pass_context
-def update(ctx, identifier: str, new_name: str, description: str, periodicity: str):
-    """Updates an existing habit's attributes."""
+def update(
+    ctx: click.Context,
+    identifier: str,
+    new_name: str,
+    description: str,
+    periodicity: str,
+):
+    """Updates an existing habit's attributes.
+
+    Args:
+        ctx (click.Context): The context object.
+        identifier (str): The name or ID of the habit to update.
+        new_name (str): An optional new name for the habit.
+        description (str): An optional new description for the habit.
+        periodicity (str): An optional new periodicity for the habit.
+    """
     if not any([new_name, description, periodicity]):
-        click.secho("Error: Please provide at least one option to update.", fg="red")
+        click.secho(
+            "Error: Please provide at least one option to update.", fg="red"
+        )
         return
     Session = ctx.obj["session_factory"]
     db = Session()
@@ -173,15 +231,26 @@ def update(ctx, identifier: str, new_name: str, description: str, periodicity: s
         except ValueError:
             id_or_name = identifier
         if new_name and manager.find_by_name(new_name):
-            click.secho(f"Error: A habit with the name '{new_name}' already exists.", fg="red")
+            click.secho(
+                f"Error: A habit with the name '{new_name}' already exists.",
+                fg="red",
+            )
             return
-        updated_habit = manager.update(id_or_name, new_name=new_name, new_description=description, new_periodicity=periodicity)
+        updated_habit = manager.update(
+            id_or_name,
+            new_name=new_name,
+            new_description=description,
+            new_periodicity=periodicity,
+        )
         if updated_habit:
             click.secho(f"Successfully updated habit '{identifier}'.", fg="green")
         else:
             click.secho(f"Error: Habit '{identifier}' not found.", fg="red")
     except MultipleResultsFound:
-        click.secho(f"Error: Multiple habits found with name '{identifier}'. Please update by ID.", fg="red")
+        click.secho(
+            f"Error: Multiple habits found with name '{identifier}'. Please update by ID.",
+            fg="red",
+        )
     except ValueError as e:
         click.secho(f"Error: {e}", fg="red")
     finally:
@@ -191,8 +260,13 @@ def update(ctx, identifier: str, new_name: str, description: str, periodicity: s
 @cli.command()
 @click.argument("identifier")
 @click.pass_context
-def delete(ctx, identifier: str):
-    """Deletes a habit by its name or ID."""
+def delete(ctx: click.Context, identifier: str):
+    """Deletes a habit by its name or ID.
+
+    Args:
+        ctx (click.Context): The context object.
+        identifier (str): The name or ID of the habit to delete.
+    """
     Session = ctx.obj["session_factory"]
     db = Session()
     try:
@@ -206,7 +280,10 @@ def delete(ctx, identifier: str):
         else:
             click.secho(f"Error: Habit '{identifier}' not found.", fg="red")
     except MultipleResultsFound:
-        click.secho(f"Error: Multiple habits found with name '{identifier}'. Please delete by ID.", fg="red")
+        click.secho(
+            f"Error: Multiple habits found with name '{identifier}'. Please delete by ID.",
+            fg="red",
+        )
     finally:
         db.close()
 
@@ -214,8 +291,13 @@ def delete(ctx, identifier: str):
 @cli.command()
 @click.argument("identifier")
 @click.pass_context
-def checkoff(ctx, identifier: str):
-    """Marks a habit as completed for the current time."""
+def checkoff(ctx: click.Context, identifier: str):
+    """Marks a habit as completed for the current time.
+
+    Args:
+        ctx (click.Context): The context object.
+        identifier (str): The name or ID of the habit to complete.
+    """
     Session = ctx.obj["session_factory"]
     db = Session()
     try:
@@ -226,22 +308,47 @@ def checkoff(ctx, identifier: str):
             id_or_name = identifier
         habit = manager.checkoff(id_or_name)
         if habit:
-            click.secho(f"Successfully checked off habit: '{habit.name}'. Keep it up!", fg="green")
+            click.secho(
+                f"Successfully checked off habit: '{habit.name}'. Keep it up!",
+                fg="green",
+            )
         else:
             click.secho(f"Error: Habit '{identifier}' not found.", fg="red")
     except MultipleResultsFound:
-        click.secho(f"Error: Multiple habits found with name '{identifier}'. Please checkoff by ID.", fg="red")
+        click.secho(
+            f"Error: Multiple habits found with name '{identifier}'. Please checkoff by ID.",
+            fg="red",
+        )
     finally:
         db.close()
 
 
 @cli.command()
-@click.option("-p", "--periodicity", type=click.Choice(list(PERIODICITIES), case_sensitive=False), help="Filter analysis by a specific periodicity.")
-@click.option("--show", type=click.Choice(["table", "list", "summary", "streak", "struggle"], case_sensitive=False), default="table", help="The type of analysis to show.")
+@click.option(
+    "-p",
+    "--periodicity",
+    type=click.Choice(list(PERIODICITIES), case_sensitive=False),
+    help="Filter analysis by a specific periodicity.",
+)
+@click.option(
+    "--show",
+    type=click.Choice(
+        ["table", "list", "summary", "streak", "struggle"], case_sensitive=False
+    ),
+    default="table",
+    help="The type of analysis to show.",
+)
 @click.option("--habit", help="Specify a habit name or ID for streak analysis.")
 @click.pass_context
-def analyze(ctx, periodicity: str, show: str, habit: str):
-    """Analyzes and displays habit data."""
+def analyze(ctx: click.Context, periodicity: str, show: str, habit: str):
+    """Analyzes and displays habit data.
+
+    Args:
+        ctx (click.Context): The context object.
+        periodicity (str): An optional period to filter the analysis by.
+        show (str): The type of analysis view to generate.
+        habit (str): An optional habit identifier for streak analysis.
+    """
     Session = ctx.obj["session_factory"]
     db = Session()
     try:
@@ -267,14 +374,16 @@ def analyze(ctx, periodicity: str, show: str, habit: str):
             results = analysis.struggled_habits(db)
             click.echo("--- Habit Struggle Score (Higher is worse) ---")
             for item in results:
-                click.echo(f"  - {item['habit'].name}: Score {item['score']} ({item['breaks']} breaks, {item['gaps']} gap days)")
+                click.echo(
+                    f"  - {item['habit'].name}: Score {item['score']} "
+                    f"({item['breaks']} breaks, {item['gaps']} gap days)"
+                )
     finally:
         db.close()
 
-# Dynamically add commands to the 'demo' group without rewriting function definitions
-# This is why I chose Click, it is easy to do such a thing with it.
+
+# Programmatically add all core commands to the 'demo' group.
+# This avoids duplicating command definitions and ensures that any new
+# command added to the main CLI is also available under 'demo'.
 for command in [list_habits, add, update, delete, checkoff, analyze]:
     demo.add_command(command)
-
-if __name__ == "__main__":
-    cli()
