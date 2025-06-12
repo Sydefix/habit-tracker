@@ -114,7 +114,7 @@ Here are a few of the most common commands.
     habit analyze --show summary
     ```
 
-For a complete list of all commands and their options, please see the **[User Guide](https://github.com/Sydefix/habit-tracker/wiki/User-Guide-Command-Line-Usage)** on our GitHub Wiki.
+For a complete list of all commands and their options, please see the **[User Guide](https://github.com/Sydefix/habit-tracker/wiki/User-Guide%3A-Command-Line-Usage)** on our GitHub Wiki.
 
 ## Contributing and Development
 
