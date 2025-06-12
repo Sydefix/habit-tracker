@@ -18,14 +18,15 @@ This application provides a robust set of tools for personal development, featur
 
 Here’s a quick look at what you can do with the Habit Tracker CLI, using the built-in demo environment.
 
+- First, start the demo environment to create and seed the demo database
 ```bash
-# First, start the demo environment to create and seed the demo database
 $ habit demo start
 Creating new demo database...
 Loading fixtures...
 Fixtures loaded successfully.
-
-# Get a high-level summary of the demo data
+```
+- Get a high-level summary of the demo data
+```bash
 $ habit demo analyze --show summary
 --- Habit Summary ---
 Total Registered Habits: 15
@@ -39,12 +40,14 @@ Performance Highlights:
 - Best Performing Habit: Pay Monthly Bills
 - Most Struggled Habit:  Weekly Review
 ---------------------
-
-# Checkoff a habit in the demo
+```
+- Checkoff a habit in the demo
+```bash
 $ habit demo checkoff "Workout"
 Successfully checked off habit: 'Workout'. Keep it up!
-
-# See the struggle scores for all habits
+```
+- See the struggle scores for all habits
+```bash
 $ habit demo analyze --show struggle
 --- Habit Struggle Score (Higher is worse) ---
   - Weekly Review: Score 63 (2 breaks, 61 gap days)
